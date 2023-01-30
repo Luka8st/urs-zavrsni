@@ -6,15 +6,17 @@ from datetime import datetime, timedelta
 
 master_id = "609ee086f8f886'"
 
-radnik_id = ["fe98fe667ee6'", "e686f8607ef8fe'", "9e66fe667e98fe'", "7e669e98e0'", "18607e98'"]
+radnik_id = ["fe98fe667ee6'", "e686f8607ef8fe'", "9e66fe667e98fe'", "7e669e98e0'", "f800607e98'"]
 
-radnici = [[radnik_id[0], "", ""], [radnik_id[1], "", ""], [radnik_id[2], "", ""], [radnik_id[3], "", ""], [radnik_id[4], "", ""]]
+#radnici = [[radnik_id[0], "", ""], [radnik_id[1], "", ""], [radnik_id[2], "", ""], [radnik_id[3], "", ""], [radnik_id[4], "", ""]]
+
+
 
 conn = sqlite3.connect("rfid.db")
 cursor = conn.cursor()
 
 cursor.execute("""
-CREATE TABLE IF NOT EXISTS rfid_tags (
+CREATE TABLE IF NOT EXISTS radnici (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
     surname TEXT,
@@ -22,6 +24,41 @@ CREATE TABLE IF NOT EXISTS rfid_tags (
     time_stamp TEXT
 )
 """)
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS vrijeme (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_radnik INTEGER,
+    pocetak TEXT,
+    kraj TEXT,
+    trajanje TEXT,
+    FOREIGN KEY (id_radnik) REFERENCES radnici(id)
+)
+""")
+
+
+conn.commit()
+
+cursor.execute("SELECT COUNT(*) FROM radnici")
+count = cursor.fetchone()[0]
+
+if count == 0:
+    sql = "INSERT INTO radnici (name, surname, rfid_id, time_stamp) VALUES (?,?,?,?)"
+    values = [
+        ["", "", radnik_id[0], ""],
+        ["", "", radnik_id[1], ""],
+        ["", "", radnik_id[2], ""],
+        ["", "", radnik_id[3], ""],
+        ["", "", radnik_id[4], ""]
+    ]
+    cursor.executemany(sql, values)
+    print("izvršen insert")
+    conn.commit()
+
+cursor.execute("SELECT name, surname, rfid_id FROM radnici")
+radnici = cursor.fetchall()
+conn.commit()
+print(radnici)
 
 ser = serial.Serial(
     port='/dev/ttyUSB0',
@@ -46,11 +83,13 @@ while True:
                 if data_radnik[6:22] != "":
                     print("1 - " + data_radnik[6:22])
                     if data_radnik[6:22] in radnik_id:
+                    #if data_radnik[6:22] in radnici["rfid_id"]:
                         print("Uspjesno procitan tag")
 
                         pos = -1
                         for i in range(5):
-                            if(data_radnik[6:22] == radnici[i][0]):
+                            print(radnici[i][2])
+                            if(data_radnik[6:22] == radnici[i][2]):
                                 pos = i
                                 break
                         
@@ -58,11 +97,24 @@ while True:
                         if (pos == -1):
                             print("Ovaj id ne postoji u bazi")
                         else:
-                            ime = input("Unesite ime: ")
-                            prezime = input("Unesite prezime: ")
-                            print(ime + " " + prezime)
-                            radnici[i][1] = ime
-                            radnici[i][2] = prezime
+                            if(radnici[pos][0] != "" or radnici[pos][1] != ""):
+                                print("Za taj id već je postavljeno ime radnika - da biste ga promijenili, prvo morate izbrisati postojeće ime")
+                            else:
+                                ime = input("Unesite ime: ").strip()
+                                prezime = input("Unesite prezime: ").strip()
+                                while (ime == "" or prezime == ""):
+                                    print("Podaci nisu ispravno uneseni")
+                                    ime = input("Unesite ime: ").strip()
+                                    prezime = input("Unesite prezime: ").strip()
+                                print(ime + " " + prezime + " - radnik je ispravno unesen")
+                                
+                                cursor.execute("""
+                                    UPDATE radnici 
+                                    SET name = ?, surname = ?, time_stamp = ? 
+                                    WHERE rfid_id = ?
+                                """, (ime, prezime, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), radnici[pos][2])
+                                )
+                                conn.commit()
                             
                         break
                     else:
@@ -72,15 +124,25 @@ while True:
                 print("Prislonite RFID tag")
                 while 1:
                     data_radnik = str(binascii.hexlify(ser.read(17)))
-                    print("2 - " + data_radnik[6:22])
-                    if data_radnik[6:22] in radnik_id:
-                        print("Uspjesno procitan tag")
-                        for i in range(5):
-                            if(data_radnik[6:22] == radnici[i][0]):
-                                radnici[i][1] = ""
-                                radnici[i][2] = ""
-                                break
-                        break
+                    if(data_radnik[6:22] != ""):
+                        print("2 - " + data_radnik[6:22])
+                        if data_radnik[6:22] in radnik_id:
+                            print("Uspjesno procitan tag")
+                            for i in range(5):
+                                if(data_radnik[6:22] == radnici[i][2]):
+                                    
+                                    rfid = data_radnik[6:22]
+                                    cursor.execute("""
+                                        UPDATE radnici 
+                                        SET name = "", surname = "", time_stamp = "" 
+                                        WHERE rfid_id = ?
+                                    """, (rfid,)
+                                    )
+                                    print("Uspjesno izbrisani podaci")
+                                    
+                                    conn.commit()
+                                    break
+                            break
             else:
                 if(vrijednost == "3"):
                     for i in range(5):
@@ -88,6 +150,33 @@ while True:
                     
 
             vrijednost = ""
+    else:
+        if(data[6:22] in radnik_id):
+            print("pokusaj prijave/odjave")
+            cursor.execute("""
+                SELECT COUNT(*) FROM vrijeme JOIN radnici ON(vrijeme.id_radnik = radnici.id)
+                WHERE vrijeme.id_radnik = ?
+            """,(data[6:22],))
+            countPrijave = cursor.fetchone()[0]
+            
+            print(cursor.fetchone())
+            print(data[6:22])
+            if(countPrijave > 0):
+                print("postoji taj radnik i ima zapis u vrijeme")
+            else:
+                print("zapis sa tim id ne postoji")
+                rfid = data[6:22]
+                cursor.execute("""
+                    SELECT COUNT(*) FROM radnici WHERE rfid_id=? AND name != ""
+                    """, (rfid,)
+                )
+                countRadnici = len(cursor.fetchall())
+
+                print(countRadnici)
+                if(countRadnici > 0):
+                    print("postoji taj radnik, ali nema zapis u vrijeme")
+
+
     """if data[6:22] != '':
         rfid_id = data[6:22]
         cursor.execute("SELECT name, surname FROM rfid_tags WHERE rfid_id=?", (rfid_id,))
