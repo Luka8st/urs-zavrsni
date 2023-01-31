@@ -251,30 +251,6 @@ while True:
 
                         print("uneseni podaci")
 
-
-    """if data[6:22] != '':
-        rfid_id = data[6:22]
-        cursor.execute("SELECT name, surname FROM rfid_tags WHERE rfid_id=?", (rfid_id,))
-        result = cursor.fetchone()
-        if result:
-            name, surname = result
-            print("Name: ", name)
-            print("Surname: ", surname)
-            print("RFID ID: ", rfid_id)
-            print("Time: ", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-            cursor.execute("INSERT INTO rfid_tags (name, surname, rfid_id, time_stamp) VALUES (?,?,?,?)
-            ", (name, surname, rfid_id, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-            conn.commit()
-        else:
-            name = input("Enter name: ")
-            surname = input("Enter surname: ")
-            cursor.execute("INSERT INTO rfid_tags (name, surname, rfid_id, time_stamp) VALUES (?,?,?,?)
-            ", (name, surname, rfid_id, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-            conn.commit()
-            print("Name: ", name)
-            print("Surname: ", surname)
-            print("RFID ID: ", rfid_id)
-            print("Time: ", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))"""
     time.sleep(1)
 
 conn.close()
