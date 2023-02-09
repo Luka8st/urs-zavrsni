@@ -20,12 +20,12 @@ checkResult = tk.Label(root)
 employee_text = tk.StringVar()
 employee_label = tk.Label(root, textvariable=employee_text)
 
-list = tk.Label(root, text="Tablica radnika:")
+list = tk.Label(root, text="Tablica aktivnih radnika:")
 
 addError = tk.Label(root, text="Radnik već ima podatke")
 
 
-startLabel = tk.Label(root, text="Prislonite tag")
+startLabel = tk.Label(root, text="Prislonite tag\nMaster tag - za master način rada\nRadnici - prijava/odjava")
 startLabel.pack()
 
 masterLabel = tk.Label(root, text = "")
@@ -55,6 +55,10 @@ employeeAdded = False
 
 logSuccess = False
 
+deleteSuccess = False
+
+deleteLabelShown = False
+
 
 master_id = "609ee086f8f886'"
 
@@ -65,12 +69,81 @@ radnik_id = ["fe98fe667ee6'", "e686f8607ef8fe'", "9e66fe667e98fe'", "7e669e98e0'
  #   startLabel.config(text="Novo tekst")
 
 def resetNoArg():
+    global masterMode, entryCount, create, optionsCount, masterLabel, startLabel, entry, employeeAdded, checkResult, deleteLabel
+    employeeAdded = False
+    masterMode = False
+    entryCount = 0
+    create = False
+    optionsCount = 0
+    #return_button.pack_forget()
+    list.pack_forget()
+    employee_label.pack_forget()
+    #submit_button.pack_forget()
+    entry.pack_forget()
+    masterLabel.pack_forget()
+    secondLabel.pack_forget()
+    checkResult.pack_forget()
+    
+
+    global logLabel, deleteLabel
+    logLabel.pack_forget()
+    deleteLabel.pack_forget()
+    startLabel.pack()
+    startLabel.config(text="Prislonite tag\nMaster tag - za master način rada\nRadnici - prijava/odjava")
+
+def resetNoArg2():
+    global logLabel, deleteLabel
+    logLabel.pack_forget()
+    deleteLabel.pack_forget()
+    startLabel.pack()
+    startLabel.config(text="Prislonite tag\nMaster tag - za master način rada\nRadnici - prijava/odjava")
+    root.after(2000, resetNoArg)
+
+    
+
+def deleteChange():
     logLabel.pack_forget()
     startLabel.pack()
-    startLabel.config(text="Prislonite tag")
+    startLabel.config(text="Prislonite tag\nMaster tag - za master način rada\nRadnici - prijava/odjava")
+
+    global radnici, deleteSuccess
+
+    posInList = -1
+    while(posInList == -1):
+        dataEmployee = str(binascii.hexlify(ser.read(17)))
+        for i in range(5):
+            if(dataEmployee[6:22] == radnici[i][3]):
+                posInList = i
+            
+
+    print(posInList)
+    cursor.execute("""
+        UPDATE radnici 
+        SET name = ?, surname = ?, time_stamp = ? 
+        WHERE rfid_id = ?
+        """, ("", "", "", radnici[posInList][3])
+    )
+    conn.commit()
+
+    cursor.execute("""
+        SELECT * FROM radnici
+    """)
+    radnici = cursor.fetchall()
+    print("radnici:")
+    print(radnici)
+    conn.commit()
+
+    startLabel.config(text=f'Uspješno brisanje podataka')
+    startLabel.pack()
+    deleteLabel.pack_forget()
+    deleteSuccess = True
+    #print("deleteSuccess=true")
+    #root.after(2000, resetNoArg)
+    #deleteSuccess = False
+
 
 def reset(return_button, submit_button):
-    global masterMode, entryCount, create, optionsCount, masterLabel, startLabel, entry, employeeAdded, checkResult, deleteLabel
+    global masterMode, entryCount, create, optionsCount, masterLabel, startLabel, entry, employeeAdded, checkResult, deleteLabel, addError
     employeeAdded = False
     masterMode = False
     entryCount = 0
@@ -92,8 +165,9 @@ def reset(return_button, submit_button):
     secondLabel.pack_forget()
     checkResult.pack_forget()
     deleteLabel.pack_forget()
+    addError.pack_forget()
     
-    startLabel.config(text="Prislonite tag")
+    startLabel.config(text="Prislonite tag\nMaster tag - za master način rada\nRadnici - prijava/odjava")
     startLabel.pack()
 
 
@@ -103,7 +177,7 @@ def checkEntry():
         root.after(1000,checkEntry())
 
 def change_starttext():
-    global entryCount, logLabel, startLabel
+    global entryCount, logLabel, startLabel, deleteLabelShown
     #print(data[6:22])
     data = str(binascii.hexlify(ser.read(17)))
     print(data[6:22] == master_id)
@@ -114,7 +188,7 @@ def change_starttext():
     if(data[6:22] == master_id or masterMode==True):
         masterMode = True
 
-        global optionsCount, logSuccess
+        global optionsCount, logSuccess, deleteSuccess
         optionsCount = optionsCount + 1
 
         print(f'optioncount={optionsCount}')
@@ -218,7 +292,15 @@ def change_starttext():
     if(logSuccess):
         root.after(5000, resetNoArg)
         logSuccess = False
+
+    if(deleteSuccess):
+        root.after(5000, resetNoArg2)
+        deleteSuccess = False
         
+    if(deleteLabelShown):
+        root.after(2000, deleteChange)
+        deleteLabelShown = False
+            
     root.after(1000, change_starttext)
 
 def submit(submit_button):
@@ -272,7 +354,8 @@ def submit(submit_button):
         
         employee = ""
         for radnik in radnici:
-            employee = employee + "ID: {0} Ime: {1} Prezime: {2} RFID: {3} Vrijeme: {4}\n".format(radnik[0], radnik[1], radnik[2], radnik[3], radnik[4])
+            if(radnik[1] != ""):
+                employee = employee + "ID: {0} Ime: {1} Prezime: {2}\n".format(radnik[0], radnik[1], radnik[2])
         #employee_label = tk.Label(root, text=employee)
         #employee_label.config(text=employee)
         #employee_text.set("Unesite tekst ovdje")
@@ -284,7 +367,7 @@ def submit(submit_button):
 
 
 def deleteEmployee(submit_button):
-    global radnici, entry, deleteLabel
+    global radnici, entry, deleteLabel, deleteLabelShown
     print("delete")
 
     entry.pack_forget()
@@ -293,42 +376,16 @@ def deleteEmployee(submit_button):
     deleteLabel.pack()
     
 
-    dataEmployee = str(binascii.hexlify(ser.read(17)))
-
-    posInList = -1
-    for i in range(5):
-        if(dataEmployee[6:22] == radnici[i][3]):
-            posInList = i
-    
-    if(posInList != -1):
-        print("pos!=-1")
-        cursor.execute("""
-            UPDATE radnici 
-            SET name = ?, surname = ?, time_stamp = ? 
-            WHERE rfid_id = ?
-            """, ("", "", "", radnici[posInList][3])
-        )
-        conn.commit()
-
-        cursor.execute("""
-            SELECT * FROM radnici
-        """)
-        radnici = cursor.fetchall()
-        print("radnici:")
-        print(radnici)
-        conn.commit()
-
-        return_button = tk.Button(root, text="Povratak", command=lambda: reset(return_button, submit_button))
-        return_button.pack()
-    else:
-        print("pos=-1")
-        root.after(100, lambda: deleteEmployee(submit_button))
+    deleteLabelShown = True
+    print("deleteLabelShown=true")
+    root.after(2000, deleteChange)
+    deleteLabelShown = False
 
 
 def addEmployee(submit_button):
     
     checkResultFalse = 0
-    global create, addError
+    global create, addError, return_button, secondLabel
     print("a")
     dataEmployee = str(binascii.hexlify(ser.read(17)))
     
@@ -343,22 +400,27 @@ def addEmployee(submit_button):
         root.after(100, addEmployee(submit_button))
     else:
         if(radnici[posInList][1] != ""):
-            print("ovaj radnik vec ima podatke")
+            print("Ovaj radnik već ima podatke")
 
             addError.pack()
 
-            test = tk.Label(root, text="test")
-            test.pack()
-
-            print("test")
-
+            #test = tk.Label(root, text="test")
+            #test.pack()
+            secondLabel.pack_forget()
             return_button = tk.Button(root, text="Povratak", command=lambda: reset(return_button, submit_button))
             return_button.pack()
 
-            root.after(100, addEmployee(submit_button))
+            print("test")
+
+            #return_button = tk.Button(root, text="Povratak", command=lambda: reset(return_button, submit_button))
+            #return_button.pack()
+
+            #root.after(100, addEmployee(submit_button))
 
         else:
             print("radnik je u bazi i nema ime")
+
+            secondLabel.pack_forget()
 
             #nameLabel = tk.Label(root, text="Unesite ime")
             nameLabel.pack()
@@ -384,7 +446,7 @@ def check_name(posInList, nameButton, submit_button):
     global radnici, checkResultFalse, startLabel, nameEntry, surnameEntry, nameLabel, surnameLabel, employeeAdded
     
     
-    if(nameEntry.get() != "" and surnameEntry.get() != ""):
+    if(nameEntry.get().strip() != "" and surnameEntry.get().strip() != ""):
         print("dobri podaci")
         cursor.execute("""
             UPDATE radnici 
