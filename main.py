@@ -13,43 +13,59 @@ optionsCount = 0
 checkResultFalse = 0
 
 root = tk.Tk()
+root.config(bg='light blue')
 root.title("My Window")
 root.geometry("1000x1000")
 checkResult = tk.Label(root)
+checkResult.config (bg='light blue')
 
 employee_text = tk.StringVar()
 employee_label = tk.Label(root, textvariable=employee_text)
+employee_label.config(bg='light blue')
 
 list = tk.Label(root, text="Tablica aktivnih radnika:")
+list.config(bg='light blue')
 
 addError = tk.Label(root, text="Radnik već ima podatke")
+addError.config(bg='light blue')
+
 
 
 startLabel = tk.Label(root, text="Prislonite tag\nMaster tag - za master način rada\nRadnici - prijava/odjava")
+startLabel.config(bg='light blue')
 startLabel.pack()
 
 masterLabel = tk.Label(root, text = "")
+masterLabel.config(bg='light blue')
 masterLabel.pack()
 
 entry = tk.Entry(root)
 
 nameLabel = tk.Label(root, text="Unesite ime")
-
+nameLabel.config(bg='light blue')
 nameEntry = tk.Entry(root)
 
 surnameLabel = tk.Label(root, text="Unesite prezime")
+surnameLabel.config(bg='light blue')
+
 
 surnameEntry = tk.Entry(root)
 
 checkResult = tk.Label(root, text="")
+checkResult.config(bg='light blue')
+
 
 #nameButton = tk.Button(root, text="Unesi podatke", command=lambda: check_name(posInList, nameButton))
 
 secondLabel = tk.Label(root, text="Prislonite RFID tag")
+secondLabel.config(bg='light blue')
+
 
 deleteLabel = tk.Label(root, text="Prislonite RFID tag da biste obrisali podatke")
+deleteLabel.config(bg='light blue')
 
 logLabel = tk.Label(root, text="uspjesna prijava/odjava")
+logLabel.config(bg='light blue')
 
 employeeAdded = False
 
