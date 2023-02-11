@@ -1,10 +1,3 @@
-/*
- * RFID.cpp
- *
- * Created: 7/31/2018 12:03:28 AM
- * Author : Xiu
- */ 
-
 #include <stdio.h>
 
 
@@ -12,7 +5,7 @@
 
 void sendz(uint8_t c)
 {
-	while(bit_is_clear(UCSRA,UDRE));// doi den khi bit UDRE = 1
+	while(bit_is_clear(UCSRA,UDRE));
 	UDR = c;
 }
 void SPI_MasterInit(void)
@@ -45,8 +38,8 @@ int main(void)
 	SPI_MasterInit();
 	
 	UBRRL = 103;
-	UCSRC =	(1<<URSEL)|(1 << UCSZ1) | (1 << UCSZ0); // k chon UBRRch va chon mode 8bit
-	UCSRB = (1 << TXEN); //EN rx,tx,ngat
+	UCSRC =	(1<<URSEL)|(1 << UCSZ1) | (1 << UCSZ0); 
+	UCSRB = (1 << TXEN); 
 	DDRA = 0xff;
 	abc.begin();
 	_SendString("START");
